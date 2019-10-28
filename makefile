@@ -1,30 +1,30 @@
 
-INCFLAGS	=-I./inc
-CFLAGS		=-g -w -shared
-LDFLAGS		=-lpthread
+INC			= -I. -I__3rd/tinyXML2 -I__utils -I__msgdef 
+INCFLAGS	=
+CFLAGS		=-g -Wall
+LDFLAGS	=-lpthread -rdynamic
 CC			=g++
-target		=libThrdPool.so
-src			=$(wildcard ./src/*.c)
-objs		=$(patsubst %.c,%.o,$(src))
-
-VPATH	= ./src
+target		= z
+src		=$(wildcard *.cpp __3rd/tinyXML2/*.cpp __utils/*.cpp __msgdef/*.cpp)
+cpps	=$(notdir $(src))
+objs	=$(patsubst %.cpp,%.o,$(src))
 
 INST	=/usr/local/lib
 
 $(target):$(objs)
-	$(CC) $^ -shared $(LDFLAGS) -o $@
-%.o:%.c
-	$(CC) $< -c -fpic -o $@
+	$(CC) $^ $(LDFLAGS) -o $@
+%.o:%.cpp
+	$(CC) $< -c -o $@
 
 .PHONY:clean
 clean:
-	-rm -f $(objs) $(target)
-test:
-	gcc test0.c 	-lpthread -lThrdPool	-o test4c
-	g++ test2.cc 	-lpthread -lThrdPool	-o test4cc
+	-rm -f $(objs)
 	
 unst:
 	rm $(INST)/$(target)
 inst:
 	cp $(target) $(INST)
+
+mem:
+	valgrind --leak-check=yes ./$(target)
 
