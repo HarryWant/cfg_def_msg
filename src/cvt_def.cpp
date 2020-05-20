@@ -1,4 +1,4 @@
-#include "cvt_def.h"
+#include "../inc/cvt_def.h"
 
 int cvt_msg2xml(MsgInf* msg, tinyxml2::XMLDocument* doc, tinyxml2::XMLElement* ele)
 {
@@ -211,7 +211,7 @@ int rdMsgCfgXml(string strFile, map<int, MsgInf*>& mapMsgInf)
 	}
  
 	XMLElement* root = doc.RootElement();
-	XMLElement* msgXmlALL = root->FirstChildElement("MsgAll");
+	//XMLElement* msgXmlALL = root->FirstChildElement("MsgAll");
 	XMLElement* msgXml = root->FirstChildElement("Msg");
 
 	while (msgXml)

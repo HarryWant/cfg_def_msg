@@ -1,5 +1,5 @@
 
-#include "_msg.h"
+#include "../inc/_msg.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 	#pragma comment(lib,"ws2_32.lib")
@@ -66,7 +66,17 @@ ostream& operator<<(ostream& os, Var* p) {
 
 void MsgInf::addFld(Var* fld) {
 	vecFld.push_back(fld);
-	uiLen;
+	//uiLen;
+}
+
+int MsgInf::getMemLen() 
+{
+	int lenAll =0;
+    vector<Var*>::iterator fld = vecFld.begin();
+    for(;fld != vecFld.end(); ++fld)
+		lenAll += (*fld)->getMemLen();
+	return uiLen = lenAll;
+		
 }
 
 string MsgInf::getFldShow(string strFldName) 
@@ -180,7 +190,7 @@ const char* getFldTypName(enumFldTyp e) {
 		"eS__CHAR","eU__CHAR",	"eX__CHAR",	"eSf_CHAR","eUf_CHAR",
 		"eS_SHORT","eU_SHORT",	"eX_SHORT",	"eSfSHORT","eUfSHORT",
 		"eS___INT","eU___INT",	"eX___INT",	"eSf__INT","eUf__INT",
-		"eS__LONG", "eU__LONG",	"e__FLOAT", "e_DOUBLE"	};
+		"eS__LONG", "eU__LONG",	"e__FLOAT", "e_DOUBLE", "e_STRING"	};
 	static char str_grp[][16]	= {"eBITGRP",	"eBITGRP8","eBITGRP16","eBITGRP32",};
 	static char str_bit[][16]	= {"eBIT",		"eBIT1","eBIT2","eBIT3","eBIT4",};
 	if (e >= eDEFAULT && e < eBITGRP)
@@ -189,6 +199,8 @@ const char* getFldTypName(enumFldTyp e) {
 		return str_grp[e - eBITGRP];
 	if (e >= eBIT && e < eBIT+5)
 		return str_bit[e - eBIT];
+	else 
+		return "无效";
 }
 
 map<string, enumFldTyp> mapFldTyp_n2v;
@@ -237,17 +249,20 @@ enumFldTyp	getFldTyp(string strFldTyp) {
  
 #define FUN__define(Type,MapFun)        Type MapFun(const char* cmd){           
 #define ___IF_CMP(keyword)                   if(!strcmp(#keyword,cmd))      return keyword;
+#define ___ELSE(keyword)                     else      						return keyword;
 #define FUN__enddef                     }
     
 
 FUN__define(enum_endian,getEndian)
 ___IF_CMP(eBE)
 ___IF_CMP(eLE)
+___ELSE(eLEBE)
 FUN__enddef  
 
 FUN__define(enumSendRecv,getSendRecv)
 ___IF_CMP(eSEND)
-___IF_CMP(eSEND)
+___IF_CMP(eRECV)
+___ELSE(eSENDRECV)
 FUN__enddef   
 
 

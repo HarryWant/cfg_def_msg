@@ -1,7 +1,7 @@
 #ifndef _MsgHlp_H_
 #define _MsgHlp_H_
 
-#include "../__utils/_hashmap.h"
+#include "_hashmap.h"
 #include "_msg.h"
 
 /*
@@ -15,7 +15,7 @@ class MsgHlp
 	public:
 		int operator()(const string & key){
 			int hash = 0;							//此哈希取值函数 不是很好
-			for (int i = 0; i < key.length(); ++i)
+			for (unsigned int i = 0; i < key.length(); ++i)
 				hash = hash << 7 ^ key[i];
 			return (hash & 0x7FFFFFFF);
 		}

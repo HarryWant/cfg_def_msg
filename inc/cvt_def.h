@@ -1,9 +1,16 @@
 #ifndef _cvt_def_H_
 #define _cvt_def_H_
 
+/*
+	将内存中协议解析结构 转化为xml配置文件，方便协议解析规则持久化
+ 	根据xml配置文件 生成内存中协议解析结构，以便运行时更改解析结构
+        将实质的解析机构按照c结构体定义的方式打印出来，方便验证
+*/
+
+
 #include <iostream>
 #include "_msg.h"
-#include "../__3rd/tinyXML2/tinyxml2.h"
+#include "../_3rd/tinyXML2/tinyxml2.h"
 
 using namespace std;
 using namespace tinyxml2;

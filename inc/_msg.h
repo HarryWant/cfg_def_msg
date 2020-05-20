@@ -9,7 +9,7 @@
 #include <string.h>	//memcpy
 #include <stdio.h>	//memcpy
 #include <iostream>
-#include "../__3rd/tinyXML2/tinyxml2.h"
+#include "../_3rd/tinyXML2/tinyxml2.h"
 
 using namespace std;
 using namespace tinyxml2;
@@ -32,11 +32,13 @@ using namespace tinyxml2;
 //g++  *.cpp -std=c++11
 
 
-enum enum_endian    {   
+enum enum_endian    {
+    eLEBE =0,   
     eLE =1,
     eBE =2
 };
 enum enumSendRecv   {
+	eSENDRECV=0,
     eSEND =1,
     eRECV =2 
 };
@@ -47,12 +49,13 @@ enum enumFldTyp
     eS_SHORT,   eU_SHORT,   eX_SHORT,   eSfSHORT,   eUfSHORT,
     eS___INT,   eU___INT,   eX___INT,   eSf__INT,   eUf__INT,
     eS__LONG,   eU__LONG,
-    e__FLOAT,   e_DOUBLE,					//16以下
+    e__FLOAT,   e_DOUBLE,					//32以下
+    e_STRING,
 
-    eBITGRP	= 1<<5,							//16以上	1<<4
+    eBITGRP	= 1<<5,							//32以上	1<<4
     eBITGRP8,   eBITGRP16,  eBITGRP32,		
 
-    eBIT = (1<<5) + (1<<3),					//16+4以上
+    eBIT = (1<<5) + (1<<3),					//32+4以上
     eBIT1,  eBIT2,  eBIT3,  eBIT4			
 };
 
@@ -91,17 +94,20 @@ public:
 	char            buf_snd[512];
 	char*           cur_buf2fld;
 	char*           cur_fld2buf;
+	int             len;
 	MsgInf(string strName,unsigned int idx)
-		:strName(strName),uiIdx(idx)
+		:uiIdx(idx), strName(strName)
 	{};
 	virtual ~MsgInf() {}
 	unsigned int getIdx() { return	uiIdx; }
-	void setIdxInf(int pos, int len) { uiIDpos = pos; uiIDlen = len; }
+	void setIdxInf(int pos, int len)   { uiIDpos = pos; uiIDlen = len; }
+	void getIdxInf(int& pos, int& len) { pos = uiIDpos; len = uiIDlen; }
 	void addFld(Var* fld);
 	void real2show();
 	void show2real();
 	void buf2fld();			
 	void fld2buf();
+	int getMemLen(); 
 	void showFldInfo();
 	//查找字段值需要遍历	改进利用哈希表存储各字段指针
 	string getFldShow(string strFldName);
@@ -115,10 +121,10 @@ class Var{
 protected:
 	enumFldTyp      eFldTyp;
 	string          strName;
-	string          strVarTyp;
-	string          strVarCpp;
 	int             len;
 	string          valShow;
+	string          strVarTyp;
+	string          strVarCpp;
 	double          dbDimension;								
 public:
 	Var(enumFldTyp eFldTyp, string strName, string strShow, string strVarTyp, string strVarCpp, double dbDimension=1 )
@@ -134,6 +140,7 @@ public:
 	void setName(string s)      { strName   = s; };
 	void setVarCpp(string s)    { strVarCpp = s; };
 	void setDimension(double d) { dbDimension=d; }
+	virtual int  getMemLen()    { return len; };
 	virtual void real2show() = 0;
 	virtual void show2real() = 0;
 	virtual void buf2fld(MsgInf*) = 0;
@@ -148,7 +155,31 @@ public:
 };
 ostream& operator<<(ostream& os, Var* p);
 
-//减少重复	提高可读怿
+class  Var_e_STRING :public Var {													
+public:																																				
+	Var_e_STRING(string name ,string show, string varcpp, double dimension=1)		
+		:Var(e_STRING, name, show, "std::string", varcpp,  dimension)		{				
+		len = show.length();														
+	}
+    virtual int getMemLen() { return sizeof(len)+len; };
+	virtual void show2real() { len = valShow.length(); }									
+	virtual void real2show() { len = valShow.length(); }	
+	virtual void buf2fld(MsgInf* p) {															
+		len	= ntohl (*(int*)p->cur_buf2fld);		
+		p->cur_buf2fld += sizeof(int);
+        valShow	= string((const char*)p->cur_buf2fld, len);	
+        p->cur_buf2fld += len;		        
+	}																				
+	virtual void fld2buf(MsgInf* p) {
+		int tmp = htonl (len);											
+		memcpy((void*)p->cur_fld2buf, &tmp, sizeof(int));
+		p->cur_fld2buf += sizeof(int);
+		memcpy((void*)p->cur_fld2buf, valShow.c_str(), len);
+		p->cur_fld2buf +=len;	        
+	}																				
+};
+
+//减少重复	提高可读
 #define Var_Def0( fld_typ, val_typ, fun_val_hton,fun_val_ntoh, fmt_val2str)	\
 class  Var_##fld_typ :public Var {														\
 public:																				\
@@ -307,10 +338,10 @@ public:																						\
 		len = sizeof(val);																	\
 	}																						\
 	void show2real(){																		\
-		int bit_len = len * 8, cur_pos = 0,i=0;												\
+		int bit_len = len * 8, cur_pos = 0;												\
 		int cnt_all = vecVar.size();														\
 		val=0;		/*每次要清零*/															\
-		for ( i = 0;((i < cnt_all) &&(cur_pos < bit_len));i++) {							\
+		for ( int i = 0;((i < cnt_all) &&(cur_pos < bit_len));i++) {							\
 			vecVar[i]->show2real();															\
 			val = mergeBitGrp((val_typ)vecVar[i]->valBit, cur_pos, vecVar[i]->lenBit, val);	\
 			cur_pos += vecVar[i]->lenBit;													\
@@ -320,7 +351,7 @@ public:																						\
 		char  cs[32];																		\
 		sprintf(cs, fmt_val2str, (val_typ)val);												\
 		valShow = string(cs);																\
-		int bit_len = len * 8, cur_pos = 0,i=0;												\
+		int bit_len = len * 8, cur_pos = 0;												\
 		int cnt_all = vecVar.size();														\
 		for (int i = 0;(i < cnt_all) && (cur_pos < bit_len);i++) {							\
 			vecVar[i]->valBit = splitBitGrp(val, cur_pos, vecVar[i]->lenBit);				\

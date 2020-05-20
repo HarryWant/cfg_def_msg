@@ -1,12 +1,30 @@
 
-#include "zzz_test_msg.h"
 
-#ifdef		TEST_msg
+#include "../inc/_msg.h"
+#include "../inc/_MsgHlp.h"
+#include "../inc/cvt_def.h"
+
+void    test_hdlMsg();
+void    test_MsgHlp();
+void    test_msgxml();
+
+int main()
+{
+	test_MsgHlp();
+	test_hdlMsg();
+	test_msgxml();
+	cache_hash_func<char*> t;
+	cout << t("q")<<endl;
+
+	return 0;
+}
+
 
 MsgInf* test_newMsg() {
 	MsgInf* inf = new MsgInf("协议", 0x23);
-	inf->setIdxInf(4,4);//定义协议时，注意必须设置 报文标识在包中的位置，否则后期拆包比对时容易出意外  
+	inf->setIdxInf(0,4);//定义协议时，注意必须设置 报文标识在包中的位置，否则后期拆包比对时容易出意外  
 	inf->addFld(new Var_eX__CHAR("标识x","0x77","scDev", 1));
+    inf->addFld(new Var_e_STRING("描述", "说明", "strTip", 1));
 	inf->addFld(new Var_eU__CHAR("设备0", "255", "scDev0", 1));
 	inf->addFld(new Var_eU__CHAR("设备1", "256", "scDev1", 1));
 	inf->addFld(new Var_eSf__INT("经度", "11.11111111", "uiLng", 11930464.708333));
@@ -38,16 +56,61 @@ MsgInf* test_newMsg() {
 	bit->setBitRep(1, "故障");
 	bitgrp->addFld(bit);
 	inf->addFld(bitgrp);
+    inf->addFld(new Var_e_STRING("追加字段", "后期追加功能版本", "strTip2", 1));
+    inf->addFld(new Var_e_STRING("评价", "真是一个灵活的胖子", "strTip3", 1));
 
 	return inf;
 }
+
+MsgInf* test_newMsg2() {
+	MsgInf* inf = new MsgInf("协议2", 0x23);
+	inf->setIdxInf(0,4);//定义协议时，注意必须设置 报文标识在包中的位置，否则后期拆包比对时容易出意外  
+	inf->addFld(new Var_eX__CHAR("标识x","","scDev", 1));
+    inf->addFld(new Var_e_STRING("描述", "", "strTip", 1));
+	inf->addFld(new Var_eU__CHAR("设备0", "", "scDev0", 1));
+	inf->addFld(new Var_eU__CHAR("设备1", "", "scDev1", 1));
+	inf->addFld(new Var_eSf__INT("经度", "", "uiLng", 11930464.708333));
+	inf->addFld(new Var_eSf__INT("纬度", "", "siLat", 5965232.3527777));
+	inf->addFld(new Var_eUfSHORT("速度", "", "ucSpd", 91.444444));
+	inf->addFld(new Var_eSfSHORT("加速", "",  "scAcc", 91.444444));
+	inf->addFld(new Var_eSfSHORT("艏摇", "", "usYaw", 91.011111));
+	inf->addFld(new Var_eSfSHORT("横摇", "", "usRoll", 91.022222));
+	inf->addFld(new Var_eSfSHORT("纵摇", "", "usPitch", 91.033333));
+	inf->addFld(new Var_eU_SHORT("海拔", "",  "usHeight", 91.444444));
+
+	Var_BitGrp* bitgrp = new VarBitGrp_uchar("控制", "ucCtrl");
+	{
+		Var_Bit* bit = new Var_eBIT1("开关", "2", "bitPower");
+		bit->setBitRep(0, "开启");
+		bit->setBitRep(1, "关闭");
+		bitgrp->addFld(bit);
+	}
+	{
+		Var_Bit* bit = new Var_eBIT3("电源", "2", "bitPower");
+		bit->setBitRep(0, "正常");
+		bit->setBitRep(1, "故障");
+		bitgrp->addFld(bit);
+	}
+	bitgrp->addFld(new Var_eBIT1("模式", "2", "bitMode"));
+	bitgrp->addFld(new Var_eBIT2("挡位", "2", "bitGear"));
+	Var_Bit* bit = new Var_eBIT1("状态", "2", "bitStatus");
+	bit->setBitRep(0, "正常");
+	bit->setBitRep(1, "故障");
+	bitgrp->addFld(bit);
+	inf->addFld(bitgrp);
+    inf->addFld(new Var_e_STRING("追加字段", "", "strTip2", 1));
+    inf->addFld(new Var_e_STRING("评价", "", "strTip3", 1));
+
+	return inf;
+}
+
 
 void test_hdlMsg()
 {
 	//inf.setFldShow("控制2");
 
 	MsgInf* inf1= test_newMsg();
-	MsgInf* inf2= test_newMsg();
+	MsgInf* inf2= test_newMsg2();
 
 
 	cout << "-------------前" << endl;
@@ -56,8 +119,11 @@ void test_hdlMsg()
 	inf1->fld2buf();
 	//cout << "控制: " << inf1->gsetFldShow("控制")<<endl;
 
+	cout<< " inf1->getMemLen()"<< inf1->getMemLen()<< "\n";
+
+
 	cout << "-------------后" << endl;
-	memcpy(inf2->buf_rcv, inf1->buf_snd, 512);
+	memcpy(inf2->buf_rcv, inf1->buf_snd, inf1->getMemLen());
 	inf2->buf2fld();
 	inf2->real2show();
 	inf2->showFldInfo();
@@ -87,6 +153,9 @@ void test_MsgHlp() {
 
 }
 
+
+#include <fstream>
+
 void test_msgxml() {
 
 	MsgInf* inf = test_newMsg();
@@ -94,13 +163,15 @@ void test_msgxml() {
 	mapMsgInf[0x1234] = inf;
 	mapMsgInf[0x123] = inf;
 
-
 	wrMsgCfgXml("protocol.xml", mapMsgInf);
+mapMsgInf.clear();
 	rdMsgCfgXml("protocol.xml", mapMsgInf);
 
 	string strSttDefCpp = cvt_msg2stt(inf);
 	cout << strSttDefCpp;
+	
+	fstream fs;
+	fs.open("protocol.h", ios::ate|ios::out);	
+	fs << strSttDefCpp;
+	fs.close();
 }
-
-
-#endif
